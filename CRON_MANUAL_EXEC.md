@@ -192,3 +192,4 @@ interface Video {
    - `KV_REST_API_TOKEN`
 3. **API 할당량**: YouTube Data API v3는 일일 할당량이 있으므로 과도한 실행은 피하세요.
 
+
