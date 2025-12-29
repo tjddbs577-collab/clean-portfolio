@@ -2,11 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-
-interface Video {
-  id: string;
-  title: string;
-}
+import type { Video } from "@/core/logic/getShorts";
 
 interface ShortsGridProps {
   videos: Video[];

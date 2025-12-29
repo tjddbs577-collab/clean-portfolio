@@ -1,9 +1,5 @@
 import { kv } from "@vercel/kv";
-
-export interface Video {
-  id: string;
-  title: string;
-}
+import type { Video } from "@/core/logic/getShorts";
 
 interface ShortsData {
   videos: Video[];
