@@ -1,8 +1,8 @@
 {
   "crons": [
     {
-      "path": "/api/cron/sync-shorts",
-      "schedule": "*/30 * * * *"
+      "path": "/api/sync-shorts",
+      "schedule": "*/10 * * * *"
     }
   ]
 }
