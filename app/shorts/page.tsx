@@ -20,39 +20,46 @@ export default async function ShortsPage() {
       {shorts.length === 0 ? (
         <div className="shorts-empty">
           <p className="mb-4">아직 플레이리스트에 영상이 없습니다.</p>
-          <div className="text-sm space-y-2 text-slate-600 dark:text-slate-400">
-            <p className="font-semibold">해결 방법:</p>
-            <ol className="list-decimal list-inside space-y-1 ml-2">
-              <li>
-                <a
-                  href="/api/kv-check"
-                  target="_blank"
-                  className="text-blue-600 underline hover:text-blue-800"
-                >
-                  KV 데이터 확인
-                </a>{" "}
-                - KV에 데이터가 있는지 확인
-              </li>
-              <li>
-                크론 작업 수동 실행 필요 (로컬 개발 시):
-                <br />
-                <code className="text-xs bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded mt-1 block">
-                  http://localhost:3000/api/cron/sync-shorts?secret=YOUR_SECRET
-                </code>
-              </li>
-              <li>
-                <a
-                  href="/api/kv-test"
-                  target="_blank"
-                  className="text-blue-600 underline hover:text-blue-800"
-                >
-                  KV 연결 테스트
-                </a>{" "}
-                - KV 연결 상태 확인
-              </li>
-            </ol>
+          <div className="text-sm space-y-3 text-slate-600 dark:text-slate-400">
+            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+              <p className="font-semibold text-blue-900 dark:text-blue-200 mb-2">
+                🚀 빠른 동기화
+              </p>
+              <a
+                href="/admin/sync"
+                className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+              >
+                유튜브 영상 지금 가져오기
+              </a>
+              <p className="text-xs mt-2 text-blue-700 dark:text-blue-300">
+                버튼을 클릭하면 유튜브 채널에서 쇼츠를 가져옵니다.
+              </p>
+            </div>
+            <div className="mt-4">
+              <p className="font-semibold mb-2">기타 확인 방법:</p>
+              <ul className="list-disc list-inside space-y-1 ml-2">
+                <li>
+                  <a
+                    href="/api/kv-check"
+                    target="_blank"
+                    className="text-blue-600 underline hover:text-blue-800"
+                  >
+                    KV 데이터 확인
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="/api/kv-test"
+                    target="_blank"
+                    className="text-blue-600 underline hover:text-blue-800"
+                  >
+                    KV 연결 테스트
+                  </a>
+                </li>
+              </ul>
+            </div>
             <p className="text-xs mt-4 text-slate-500">
-              💡 Vercel에 배포하면 크론 작업이 자동으로 30분마다 실행됩니다.
+              💡 이후부터는 10분마다 자동으로 동기화됩니다.
             </p>
           </div>
         </div>

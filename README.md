@@ -180,4 +180,4 @@ If npm run build succeeds, you can deploy to most platforms.
 License (EN)
 
 Define a license that matches your distribution/sales policy (personal/commercial use, redistribution rules, etc.).
-END
+ENDdeploy test
