@@ -1,15 +1,22 @@
 import { NextResponse } from "next/server";
 import { syncShorts } from "@/core/logic/syncShorts";
 
+// Node 런타임 강제
 export const runtime = "nodejs";
 
+/**
+ * GET /api/admin/sync
+ * - YouTube → Shorts 동기화
+ * - Redis/KV에 저장
+ */
 export async function GET() {
   try {
     const result = await syncShorts();
 
-    // syncShorts()의 결과를 그대로 반환
     return NextResponse.json(result);
   } catch (error) {
+    console.error("❌ admin sync error:", error);
+
     return NextResponse.json(
       {
         success: false,
