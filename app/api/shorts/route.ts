@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { getShorts } from "@/core/logic/getShorts";
 
+// ⭐️ 핵심: Turbopack/Edge 우회 → Node.js 런타임 강제
+export const runtime = "nodejs";
+
 /**
  * GET /api/shorts
  * - KV에 저장된 쇼츠 데이터를 반환
