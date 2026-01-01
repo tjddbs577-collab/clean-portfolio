@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getShorts } from "@/core/logic/getShorts";
 import { ShortsGrid } from "@/components/ShortsGrid";
+// force redeploy (no logic change)
 
 export const revalidate = 3600; // 1시간마다 자동 갱신
 
