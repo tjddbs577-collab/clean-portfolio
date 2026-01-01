@@ -24,8 +24,8 @@ export interface SyncError {
 export async function syncShorts(): Promise<SyncResult | SyncError> {
   console.log("▶ syncShorts start");
 
-  const isDev = process.env.NODE_ENV === "development";
   const lockKey = "shorts:sync:lock";
+  let hasLock = false;
 
   try {
     const apiKey = process.env.YOUTUBE_API_KEY;
@@ -33,71 +33,15 @@ export async function syncShorts(): Promise<SyncResult | SyncError> {
 
     // 0️⃣ 환경변수 체크
     if (!apiKey || !channelId) {
-      console.error("❌ Missing env", { apiKey, channelId });
       return {
         success: false,
         error: "Missing YOUTUBE_API_KEY or YOUTUBE_CHANNEL_ID",
       };
     }
 
-    // 🔒 0-1️⃣ 크론 중복 실행 방어 (prod only)
-    if (!isDev) {
-      const locked = await kv.get(lockKey);
-      if (locked) {
-        console.warn("⏭ syncShorts skipped: already running");
-        return {
-          success: true,
-          count: 0,
-          updatedAt: Date.now(),
-        };
-      }
-
-      // 5분 락
-      await kv.set(lockKey, "1", { ex: 300 });
-    }
-
-    // 1️⃣ 채널 정보 가져오기
-    console.log("▶ step 1: fetch channel");
-    const channelRes = await fetch(
-      `https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${channelId}&key=${apiKey}`
-    );
-
-    if (!channelRes.ok) {
-      const errorText = await channelRes.text();
-      console.error("❌ channel fetch failed", errorText);
-      throw new Error("Failed to fetch channel");
-    }
-
-    const channelData = await channelRes.json();
-    const uploadsPlaylistId =
-      channelData.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
-
-    if (!uploadsPlaylistId) {
-      throw new Error("Uploads playlist not found");
-    }
-
-    // 2️⃣ 업로드 재생목록 조회
-    console.log("▶ step 2: fetch playlist items");
-    const playlistRes = await fetch(
-      `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${uploadsPlaylistId}&maxResults=50&key=${apiKey}`
-    );
-
-    if (!playlistRes.ok) {
-      const errorText = await playlistRes.text();
-      console.error("❌ playlist fetch failed", errorText);
-      throw new Error("Failed to fetch playlist items");
-    }
-
-    const playlistData = await playlistRes.json() as {
-      items?: Array<{ snippet?: { resourceId?: { videoId?: string } } }>;
-    };
-    const videoIds = playlistData.items
-      ?.map((item) => item.snippet?.resourceId?.videoId)
-      .filter(Boolean)
-      .join(",");
-
-    if (!videoIds) {
-      console.warn("⚠️ No video IDs found");
+    // 🔒 중복 실행 방어 (5분)
+    const locked = await kv.get<string>(lockKey);
+    if (locked) {
       return {
         success: true,
         count: 0,
@@ -105,54 +49,99 @@ export async function syncShorts(): Promise<SyncResult | SyncError> {
       };
     }
 
-    // 3️⃣ 영상 상세 조회
-    console.log("▶ step 3: fetch videos detail");
+    await kv.set(lockKey, "1", { ex: 300 });
+    hasLock = true;
+
+    // 1️⃣ 채널 정보
+    const channelRes = await fetch(
+      `https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${channelId}&key=${apiKey}`
+    );
+    if (!channelRes.ok) throw new Error("Failed to fetch channel");
+
+    const channelData: {
+      items?: {
+        contentDetails?: {
+          relatedPlaylists?: { uploads?: string };
+        };
+      }[];
+    } = await channelRes.json();
+
+    const uploadsPlaylistId =
+      channelData.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
+
+    if (!uploadsPlaylistId) {
+      throw new Error("Uploads playlist not found");
+    }
+
+    // 2️⃣ 재생목록
+    const playlistRes = await fetch(
+      `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${uploadsPlaylistId}&maxResults=50&key=${apiKey}`
+    );
+    if (!playlistRes.ok) throw new Error("Failed to fetch playlist items");
+
+    const playlistData: {
+      items?: {
+        snippet?: {
+          resourceId?: { videoId?: string };
+        };
+      }[];
+    } = await playlistRes.json();
+
+    const videoIds = playlistData.items
+      ?.map(item => item.snippet?.resourceId?.videoId)
+      .filter((id): id is string => Boolean(id))
+      .join(",");
+
+    if (!videoIds) {
+      return {
+        success: true,
+        count: 0,
+        updatedAt: Date.now(),
+      };
+    }
+
+    // 3️⃣ 영상 상세
     const videosRes = await fetch(
       `https://www.googleapis.com/youtube/v3/videos?part=contentDetails,snippet,status&id=${videoIds}&key=${apiKey}`
     );
+    if (!videosRes.ok) throw new Error("Failed to fetch videos");
 
-    if (!videosRes.ok) {
-      const errorText = await videosRes.text();
-      console.error("❌ videos fetch failed", errorText);
-      throw new Error("Failed to fetch videos");
-    }
+    const videosData: {
+      items?: {
+        id: string;
+        snippet?: { title?: string };
+        contentDetails?: { duration?: string };
+        status?: {
+          embeddable?: boolean;
+          privacyStatus?: string;
+        };
+      }[];
+    } = await videosRes.json();
 
-    const videosData = await videosRes.json();
-
-    // 4️⃣ Shorts 필터링
-    console.log("▶ step 4: filter shorts");
+    // 4️⃣ Shorts 필터
     const shorts: Video[] = [];
 
-    for (const video of videosData.items || []) {
+    for (const video of videosData.items ?? []) {
       const duration = video.contentDetails?.duration;
       const isEmbeddable = video.status?.embeddable === true;
       const privacyStatus = video.status?.privacyStatus;
 
-      let durationInSeconds = 0;
-      if (duration) {
-        const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
-        if (match) {
-          const hours = parseInt(match[1] || "0", 10);
-          const minutes = parseInt(match[2] || "0", 10);
-          const seconds = parseInt(match[3] || "0", 10);
-          durationInSeconds = hours * 3600 + minutes * 60 + seconds;
-        }
+      let seconds = 0;
+      const match = duration?.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+      if (match) {
+        seconds =
+          Number(match[1] || 0) * 3600 +
+          Number(match[2] || 0) * 60 +
+          Number(match[3] || 0);
       }
 
-      if (
-        durationInSeconds > 0 &&
-        durationInSeconds <= 60 &&
-        isEmbeddable &&
-        privacyStatus === "public"
-      ) {
+      if (seconds > 0 && seconds <= 60 && isEmbeddable && privacyStatus === "public") {
         shorts.push({
           id: video.id,
-          title: video.snippet?.title || "",
+          title: video.snippet?.title ?? "",
         });
       }
     }
-
-    console.log(`▶ shorts filtered count: ${shorts.length}`);
 
     // 5️⃣ KV 저장
     const shortsData: ShortsData = {
@@ -160,12 +149,7 @@ export async function syncShorts(): Promise<SyncResult | SyncError> {
       updatedAt: Date.now(),
     };
 
-    if (isDev) {
-      console.log("⚠️ dev mode: skip KV save", shortsData);
-    } else {
-      console.log("▶ step 5: save to KV");
-      await kv.set("shorts:latest", shortsData, { ex: 21600 });
-    }
+    await kv.set("shorts:latest", shortsData, { ex: 60 * 60 });
 
     console.log("▶ syncShorts success");
 
@@ -182,8 +166,8 @@ export async function syncShorts(): Promise<SyncResult | SyncError> {
       detail: error instanceof Error ? error.message : String(error),
     };
   } finally {
-    // 🔓 lock 해제 (prod only)
-    if (!isDev) {
+    // 🔓 실제로 락을 잡았을 때만 해제
+    if (hasLock) {
       await kv.del(lockKey);
     }
   }
