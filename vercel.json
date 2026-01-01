@@ -1,7 +1,7 @@
 {
   "crons": [
     {
-      "path": "/api/sync-shorts",
+      "path": "/api/cron/sync-shorts",
       "schedule": "*/10 * * * *"
     }
   ]
