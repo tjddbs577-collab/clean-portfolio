@@ -1,4 +1,3 @@
-// app/shorts/page.tsx
 import Link from "next/link";
 
 interface Video {
@@ -7,10 +6,13 @@ interface Video {
 }
 
 async function fetchShorts(): Promise<Video[]> {
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000"}/api/shorts`,
-    { cache: "no-store" } // 항상 최신
-  );
+  const baseUrl =
+    process.env.NEXT_PUBLIC_BASE_URL ??
+    "https://clean-portfolio-pink.vercel.app";
+
+  const res = await fetch(`${baseUrl}/api/shorts`, {
+    cache: "no-store",
+  });
 
   if (!res.ok) {
     console.error("❌ failed to fetch /api/shorts");
@@ -18,8 +20,6 @@ async function fetchShorts(): Promise<Video[]> {
   }
 
   const json = await res.json();
-  console.log("SHORTS API RESULT:", json);
-
   return json.videos ?? [];
 }
 
@@ -27,7 +27,7 @@ export default async function ShortsPage() {
   const shorts = await fetchShorts();
 
   return (
-    <main className="shorts-main">
+    <main className="shorts-main max-w-md mx-auto px-4">
       <Link href="/" className="text-sm text-gray-500">
         ← 메인으로 돌아가기
       </Link>
@@ -39,13 +39,28 @@ export default async function ShortsPage() {
           아직 불러온 쇼츠가 없습니다.
         </p>
       ) : (
-        <ul className="mt-6 space-y-3">
+        <ul className="mt-6 space-y-8">
           {shorts.map((video) => (
-            <li key={video.id} className="border p-3 rounded">
-              <p className="font-medium">{video.title}</p>
+            <li key={video.id} className="border rounded-lg p-3">
+              {/* 🎥 쇼츠 영상 */}
+              <iframe
+                width="100%"
+                height="640"
+                src={`https://www.youtube.com/embed/${video.id}`}
+                title={video.title}
+                className="rounded"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+
+              {/* 제목 */}
+              <p className="mt-2 font-medium">{video.title}</p>
+
+              {/* 유튜브 이동 */}
               <a
                 href={`https://www.youtube.com/watch?v=${video.id}`}
                 target="_blank"
+                rel="noopener noreferrer"
                 className="text-sm text-blue-500 underline"
               >
                 YouTube에서 보기
@@ -57,4 +72,3 @@ export default async function ShortsPage() {
     </main>
   );
 }
-
