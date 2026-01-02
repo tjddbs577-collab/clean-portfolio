@@ -8,16 +8,11 @@
 ### 현재 코드 상태
 ```typescript
 // core/logic/getShorts.ts
-async function getShortsFromKV(): Promise<Video[]> {
-  try {
-    const data = await kv.get<ShortsData>("shorts:latest");
-    return data?.videos || [];
-  } catch (error) {
-    return [];
-  }
+export async function getShorts(): Promise<Video[]> {
+  return [];
 }
 ```
-- 현재는 Vercel KV에서만 데이터를 읽고 있음
+- 현재는 빈 배열을 반환함
 - **fetch 호출이 없음**
 
 ### 원하는 것
@@ -31,7 +26,7 @@ YouTube Data API v3를 직접 호출하는 fetch 경로를 찾아서 `getShorts.
 Next.js 프로젝트에서 core/logic/getShorts.ts 파일을 수정하려고 해요.
 
 현재 상태:
-- getShorts.ts는 Vercel KV에서만 데이터를 읽고 있음
+- getShorts.ts는 빈 배열을 반환함
 - fetch를 사용하지 않음
 
 원하는 것:
@@ -54,7 +49,7 @@ Next.js 프로젝트에서 YouTube 쇼츠를 가져오는 로직을 구현하려
 
 **현재 상황:**
 - `core/logic/getShorts.ts` 파일이 있음
-- 현재는 Vercel KV에서만 데이터를 읽고 있음 (fetch 사용 안 함)
+- 현재는 빈 배열을 반환함 (fetch 사용 안 함)
 - `core/logic/syncShorts.ts`에는 YouTube API 호출 로직이 있지만, 이것은 크론 작업용
 
 **문제:**
@@ -141,7 +136,7 @@ Next.js 프로젝트에서 core/logic/getShorts.ts 파일에서
 YouTube Data API v3를 fetch로 직접 호출하려고 해요.
 
 **현재:**
-- getShorts.ts는 Vercel KV에서만 데이터 읽음
+- getShorts.ts는 빈 배열 반환
 - fetch 호출 없음
 
 **원하는 것:**

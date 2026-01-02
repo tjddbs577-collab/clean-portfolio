@@ -1,58 +1,62 @@
-import { kv } from "@vercel/kv";
+// core/logic/syncShorts.ts
 import type { Video } from "./getShorts";
 
-export interface ShortsData {
-  videos: Video[];
-  updatedAt: number;
-}
+/**
+ * 서버 메모리 저장소
+ * ⚠️ 서버 재시작 시 초기화됨 (의도된 동작)
+ */
+let MEMORY_SHORTS: Video[] = [];
+let LAST_UPDATED = 0;
 
-export interface SyncResult {
-  success: true;
-  count: number;
-  updatedAt: number;
-}
-
-export interface SyncError {
-  success: false;
-  error: string;
-  detail?: string;
+/**
+ * YouTube playlist item 최소 타입
+ */
+interface PlaylistItem {
+  snippet?: {
+    resourceId?: {
+      videoId?: string;
+    };
+  };
 }
 
 /**
- * YouTube 채널에서 쇼츠를 동기화하는 공통 함수
+ * YouTube video item 최소 타입
  */
-export async function syncShorts(): Promise<SyncResult | SyncError> {
-  console.log("▶ syncShorts start");
+interface VideoItem {
+  id: string;
+  snippet?: {
+    title?: string;
+  };
+  contentDetails?: {
+    duration?: string;
+  };
+  status?: {
+    embeddable?: boolean;
+    privacyStatus?: string;
+  };
+}
 
-  const lockKey = "shorts:sync:lock";
-  let hasLock = false;
-
+/**
+ * YouTube 채널에서 쇼츠를 동기화
+ */
+export async function syncShorts() {
   try {
     const apiKey = process.env.YOUTUBE_API_KEY;
     const channelId = process.env.YOUTUBE_CHANNEL_ID;
 
-    // 0️⃣ 환경변수 체크
     if (!apiKey || !channelId) {
-      return {
-        success: false,
-        error: "Missing YOUTUBE_API_KEY or YOUTUBE_CHANNEL_ID",
-      };
+      return { success: false, error: "Missing env" };
     }
 
-    // 🔒 중복 실행 방어 (5분)
-    const locked = await kv.get<string>(lockKey);
-    if (locked) {
-      return {
-        success: true,
-        count: 0,
-        updatedAt: Date.now(),
-      };
+    // 1분 이내 재호출 방지
+    const now = Date.now();
+    if (now - LAST_UPDATED < 60_000) {
+      return { success: true, count: MEMORY_SHORTS.length };
     }
 
-    await kv.set(lockKey, "1", { ex: 300 });
-    hasLock = true;
-
-    // 1️⃣ 채널 정보
+    /* =========================
+       1️⃣ 채널 정보
+    ========================= */
     const channelRes = await fetch(
       `https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${channelId}&key=${apiKey}`
     );
@@ -61,7 +65,9 @@ export async function syncShorts(): Promise<SyncResult | SyncError> {
     const channelData: {
       items?: {
         contentDetails?: {
-          relatedPlaylists?: { uploads?: string };
+          relatedPlaylists?: {
+            uploads?: string;
+          };
         };
       }[];
     } = await channelRes.json();
@@ -73,61 +79,52 @@ export async function syncShorts(): Promise<SyncResult | SyncError> {
       throw new Error("Uploads playlist not found");
     }
 
-    // 2️⃣ 재생목록
+    /* =========================
+       2️⃣ 재생목록
+    ========================= */
     const playlistRes = await fetch(
       `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${uploadsPlaylistId}&maxResults=50&key=${apiKey}`
     );
     if (!playlistRes.ok) throw new Error("Failed to fetch playlist items");
 
-    const playlistData: {
-      items?: {
-        snippet?: {
-          resourceId?: { videoId?: string };
-        };
-      }[];
-    } = await playlistRes.json();
+    const playlistData: { items?: PlaylistItem[] } =
+      await playlistRes.json();
 
-    const videoIds = playlistData.items
-      ?.map(item => item.snippet?.resourceId?.videoId)
-      .filter((id): id is string => Boolean(id))
-      .join(",");
+    const videoIds =
+      playlistData.items
+        ?.map(item => item.snippet?.resourceId?.videoId)
+        .filter((id): id is string => Boolean(id))
+        .join(",") ?? "";
 
     if (!videoIds) {
-      return {
-        success: true,
-        count: 0,
-        updatedAt: Date.now(),
-      };
+      MEMORY_SHORTS = [];
+      LAST_UPDATED = now;
+      return { success: true, count: 0 };
     }
 
-    // 3️⃣ 영상 상세
+    /* =========================
+       3️⃣ 영상 상세
+    ========================= */
     const videosRes = await fetch(
       `https://www.googleapis.com/youtube/v3/videos?part=contentDetails,snippet,status&id=${videoIds}&key=${apiKey}`
     );
     if (!videosRes.ok) throw new Error("Failed to fetch videos");
 
-    const videosData: {
-      items?: {
-        id: string;
-        snippet?: { title?: string };
-        contentDetails?: { duration?: string };
-        status?: {
-          embeddable?: boolean;
-          privacyStatus?: string;
-        };
-      }[];
-    } = await videosRes.json();
+    const videosData: { items?: VideoItem[] } =
+      await videosRes.json();
 
-    // 4️⃣ Shorts 필터
+    /* =========================
+       4️⃣ ⭐️ shorts 선언 (핵심!)
+    ========================= */
     const shorts: Video[] = [];
 
-    for (const video of videosData.items ?? []) {
-      const duration = video.contentDetails?.duration;
-      const isEmbeddable = video.status?.embeddable === true;
-      const privacyStatus = video.status?.privacyStatus;
+    for (const v of videosData.items ?? []) {
+      const duration = v.contentDetails?.duration ?? "";
+      const isEmbeddable = v.status?.embeddable === true;
+      const privacyStatus = v.status?.privacyStatus;
 
       let seconds = 0;
-      const match = duration?.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+      const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
       if (match) {
         seconds =
           Number(match[1] || 0) * 3600 +
@@ -135,40 +132,38 @@ export async function syncShorts(): Promise<SyncResult | SyncError> {
           Number(match[3] || 0);
       }
 
-      if (seconds > 0 && seconds <= 60 && isEmbeddable && privacyStatus === "public") {
+      if (
+        seconds > 0 &&
+        seconds <= 60 &&
+        isEmbeddable &&
+        privacyStatus === "public"
+      ) {
         shorts.push({
-          id: video.id,
-          title: video.snippet?.title ?? "",
+          id: v.id,
+          title: v.snippet?.title ?? "",
         });
       }
     }
+    console.log("SHORTS FILTER RESULT:", shorts);
 
-    // 5️⃣ KV 저장
-    const shortsData: ShortsData = {
-      videos: shorts,
-      updatedAt: Date.now(),
-    };
+    /* =========================
+       5️⃣ 메모리 저장
+    ========================= */
+    MEMORY_SHORTS = shorts;
+    LAST_UPDATED = now;
 
-    await kv.set("shorts:latest", shortsData, { ex: 60 * 60 });
-
-    console.log("▶ syncShorts success");
-
-    return {
-      success: true,
-      count: shorts.length,
-      updatedAt: shortsData.updatedAt,
-    };
-  } catch (error) {
-    console.error("❌ syncShorts exception", error);
+    return { success: true, count: shorts.length };
+  } catch (e) {
     return {
       success: false,
-      error: "Internal server error",
-      detail: error instanceof Error ? error.message : String(error),
+      error: e instanceof Error ? e.message : String(e),
     };
-  } finally {
-    // 🔓 실제로 락을 잡았을 때만 해제
-    if (hasLock) {
-      await kv.del(lockKey);
-    }
   }
+}
+
+/**
+ * getShorts.ts 에서만 사용
+ */
+export function getMemoryShorts(): Video[] {
+  return MEMORY_SHORTS;
 }

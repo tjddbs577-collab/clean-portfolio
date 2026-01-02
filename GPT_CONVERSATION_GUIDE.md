@@ -7,7 +7,7 @@
 
 1. 크론 작업이 30분마다 YouTube Data API v3로 채널의 최신 영상들을 가져와서
 2. duration ≤ 60초인 영상만 필터링하고
-3. Vercel KV(Redis)에 저장해
+3. 데이터 처리
 4. /shorts 페이지에서 자동으로 표시되게 만들었어.
 
 결과적으로 유튜브 채널에 쇼츠가 새로 올라오면 30분 이내에 우리 웹사이트에 자동으로 반영돼.
@@ -25,7 +25,7 @@ Next.js 프로젝트에 YouTube 쇼츠 자동 수집 시스템을 구축했어.
    - Vercel Cron으로 30분마다 자동 실행
    - YouTube Data API v3로 채널의 업로드 재생목록에서 최신 50개 영상 수집
    - 필터링: duration ≤ 60초, embeddable, public 영상만
-   - Vercel KV(Redis)에 `shorts:latest` 키로 저장 (TTL 6시간)
+   - 쇼츠 데이터 처리
 
 2. 데이터 조회 (`core/logic/getShorts.ts`)
    - `/shorts` 페이지에서 KV에서 데이터 읽어서 표시
@@ -89,7 +89,7 @@ A: "Vercel에 배포하면 vercel.json에 설정한 크론 스케줄(30분마다
 A: "duration ≤ 60초, embeddable = true, privacyStatus = public인 영상만 쇼츠로 판별해."
 
 ### Q: 데이터는 어디에 저장되나요?
-A: "Vercel KV(Redis 기반)에 저장해. 키는 `shorts:latest`이고, TTL은 6시간이야. 30분마다 갱신되니까 항상 최신 데이터가 유지돼."
+A: "서버 메모리에 저장해. 서버 재시작 시 초기화되지만 크론 작업으로 주기적으로 갱신돼."
 
 ### Q: 성능은 어떤가요?
 A: "초기 로딩은 썸네일만 표시하고, 클릭한 영상만 iframe으로 로드해서 성능을 최적화했어. KV 캐싱으로 YouTube API 호출도 최소화했고."
@@ -100,7 +100,7 @@ A: "초기 로딩은 썸네일만 표시하고, 클릭한 영상만 iframe으로
 
 - **자동화**: 크론 작업으로 자동 수집
 - **YouTube Data API v3**: 채널 영상 데이터 가져오기
-- **Vercel KV**: Redis 기반 캐싱
+- **저장소**: 서버 메모리
 - **필터링**: duration ≤ 60초, embeddable, public
 - **실시간 반영**: 최대 30분 지연으로 자동 업데이트
 

@@ -1,9 +1,3 @@
 {
-  "crons": [
-    {
-      "path": "/api/cron/sync-shorts",
-      "schedule": "*/10 * * * *"
-    }
-  ]
+  "crons": []
 }
-

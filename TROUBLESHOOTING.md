@@ -3,24 +3,24 @@
 ## 문제: "아직 플레이리스트에 영상이 없습니다" 메시지가 표시됨
 
 ### 원인
-1. **KV에 데이터가 없음** - 크론 작업이 실행되지 않았거나 실패함
-2. **환경 변수가 설정되지 않음** - YouTube API 키 또는 KV 설정 누락
+1. **데이터가 없음** - 크론 작업이 실행되지 않았거나 실패함
+2. **환경 변수가 설정되지 않음** - YouTube API 키 누락
 3. **크론 작업이 아직 실행되지 않음** - 로컬 개발 환경에서는 수동 실행 필요
 
 ---
 
 ## 해결 방법
 
-### 1단계: KV 데이터 확인
+### 1단계: API 데이터 확인
 
 브라우저에서 다음 URL 접속:
 ```
-http://localhost:3000/api/kv-check
+http://localhost:3000/api/shorts
 ```
 
 **결과 해석:**
-- `hasData: false` → KV에 데이터가 없음 (2단계로 진행)
-- `hasData: true` → 데이터가 있지만 페이지에 표시되지 않음 (다른 문제)
+- `count: 0` → 데이터가 없음 (2단계로 진행)
+- `count > 0` → 데이터가 있지만 페이지에 표시되지 않음 (다른 문제)
 
 ### 2단계: 크론 작업 수동 실행 (데이터 수집)
 
@@ -75,9 +75,6 @@ YOUTUBE_CHANNEL_ID=your_channel_id_here
 # 크론 작업 보안
 SHORTS_SYNC_SECRET=your_secret_here
 
-# Vercel KV (로컬 개발 시)
-KV_REST_API_URL=https://your-kv-instance.vercel-storage.com
-KV_REST_API_TOKEN=your_token_here
 ```
 
 ### 4단계: 쇼츠 페이지 다시 확인
@@ -103,8 +100,6 @@ A:
 ### Q: YouTube API 할당량은 어떻게 되나요?
 A: YouTube Data API v3는 기본적으로 일일 10,000 units 할당량이 있습니다. 크론 작업은 약 100 units를 사용하므로 일일 약 100회 실행 가능합니다.
 
-### Q: KV 없이 로컬에서 테스트할 수 있나요?
-A: 현재는 KV가 필수입니다. 로컬 개발 환경에서도 Vercel KV를 설정하거나, mock 데이터를 사용하도록 코드를 수정해야 합니다.
 
 ---
 
@@ -116,11 +111,9 @@ A: 현재는 KV가 필수입니다. 로컬 개발 환경에서도 Vercel KV를 �
 - [ ] `YOUTUBE_API_KEY` 설정됨
 - [ ] `YOUTUBE_CHANNEL_ID` 설정됨
 - [ ] `SHORTS_SYNC_SECRET` 설정됨
-- [ ] `KV_REST_API_URL` 설정됨
-- [ ] `KV_REST_API_TOKEN` 설정됨
 - [ ] 개발 서버 실행 중 (`npm run dev`)
 - [ ] 크론 작업 수동 실행 성공 (`/api/cron/sync-shorts?secret=...`)
-- [ ] KV 데이터 확인 (`/api/kv-check`에서 `hasData: true`)
+- [ ] API 데이터 확인 (`/api/shorts`에서 `count > 0`)
 - [ ] 쇼츠 페이지 새로고침
 
 ---
@@ -132,10 +125,10 @@ A: 현재는 KV가 필수입니다. 로컬 개발 환경에서도 Vercel KV를 �
 ```bash
 # 1. 환경 변수 확인 (값은 표시되지 않음)
 cd /Users/choisungyun/커서ai/clean-portfolio
-cat .env.local | grep -E "YOUTUBE_API_KEY|YOUTUBE_CHANNEL_ID|SHORTS_SYNC_SECRET|KV_" | cut -d'=' -f1
+cat .env.local | grep -E "YOUTUBE_API_KEY|YOUTUBE_CHANNEL_ID|SHORTS_SYNC_SECRET" | cut -d'=' -f1
 
 # 2. 개발 서버가 실행 중인지 확인
-curl -s http://localhost:3000/api/kv-check | head -20
+curl -s http://localhost:3000/api/shorts | head -20
 
 # 3. 크론 작업 실행 (SECRET 값을 직접 입력해야 함)
 # curl -X GET "http://localhost:3000/api/cron/sync-shorts?secret=YOUR_SECRET"

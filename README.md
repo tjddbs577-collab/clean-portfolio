@@ -99,7 +99,7 @@ app/
   portfolio/page.tsx      # 포트폴리오 리스트
   shorts/page.tsx         # 쇼츠 페이지
   api/
-    cron/sync-shorts/     # 크론 작업 (YouTube API → KV)
+    cron/sync-shorts/     # 크론 작업 (YouTube API)
 components/
   ProjectCard.tsx         # 프로젝트 카드 UI
   ShortsGrid.tsx          # 쇼츠 그리드 (모달 포함)
@@ -107,7 +107,7 @@ core/
   data/mock.ts            # mockProjects 데이터 + Project 타입
   logic/
     getProjects.ts        # 데이터 조회 로직 (mock → API로 교체 포인트)
-    getShorts.ts          # 쇼츠 조회 로직 (KV에서 읽기)
+    getShorts.ts          # 쇼츠 조회 로직
 public/                   # 이미지/정적 파일
 
 Project Structure (EN)
@@ -116,7 +116,7 @@ app/
   portfolio/page.tsx      # Portfolio list
   shorts/page.tsx         # Shorts page
   api/
-    cron/sync-shorts/     # Cron job (YouTube API → KV)
+    cron/sync-shorts/     # Cron job (YouTube API)
 components/
   ProjectCard.tsx         # Project card UI
   ShortsGrid.tsx          # Shorts grid (with modal)
@@ -124,7 +124,7 @@ core/
   data/mock.ts            # mockProjects data + Project type
   logic/
     getProjects.ts        # Fetch logic (swap point for API/DB)
-    getShorts.ts          # Shorts fetch logic (read from KV)
+    getShorts.ts          # Shorts fetch logic
 public/                   # Images/static assets
 
 데이터 수정 방법 (KR)

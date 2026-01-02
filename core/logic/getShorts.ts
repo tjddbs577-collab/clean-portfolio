@@ -1,7 +1,8 @@
-import { redis } from "@/core/lib/redis";
+// core/logic/getShorts.ts
+import { syncShorts, getMemoryShorts } from "./syncShorts";
 
 /**
- * 공통 Video 타입
+ * 쇼츠 공통 타입 (유일한 정의 ✅)
  */
 export interface Video {
   id: string;
@@ -9,37 +10,24 @@ export interface Video {
 }
 
 /**
- * Redis에 저장되는 구조
+ * 쇼츠 전체 (자동 동기화 포함)
  */
-interface ShortsData {
-  videos: Video[];
-  updatedAt: number;
-}
-
-/* =========================================================
- * Redis에서 쇼츠 가져오기
- * ========================================================= */
-async function getShortsFromRedis(): Promise<Video[]> {
-  try {
-    const data = await redis.get<ShortsData>("shorts:latest");
-    return data?.videos ?? [];
-  } catch (error) {
-    console.warn("Redis read failed:", error);
-    return [];
-  }
-}
-
-/* =========================================================
- * 🔥 반드시 export 되어 있어야 함
- * ========================================================= */
 export async function getShorts(): Promise<Video[]> {
-  return getShortsFromRedis();
+  let shorts = getMemoryShorts();
+
+  // 🔥 메모리가 비어 있으면 자동 동기화
+  if (shorts.length === 0) {
+    await syncShorts();
+    shorts = getMemoryShorts();
+  }
+
+  return shorts;
 }
 
-/* =========================================================
- * 최신 N개만
- * ========================================================= */
-export async function getLatestShorts(count: number = 3): Promise<Video[]> {
-  const shorts = await getShortsFromRedis();
+/**
+ * 최신 N개
+ */
+export async function getLatestShorts(count = 3): Promise<Video[]> {
+  const shorts = await getShorts();
   return shorts.slice(0, count);
 }

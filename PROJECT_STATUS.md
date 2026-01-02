@@ -45,8 +45,7 @@
   - `PROJECT_SUMMARY.md` (중복)
 
 ### 4. 디버깅 도구 ✅
-- `/api/kv-check`: KV 데이터 확인
-- `/api/kv-test`: KV 연결 테스트
+- `/api/shorts`: 쇼츠 데이터 확인
 
 ### 5. 문서화 ✅
 - `ENV_SETUP.md`: 환경 변수 설정 가이드
@@ -72,8 +71,6 @@ app/
       ├── cron/
       │   └── sync-shorts/
       │       └── route.ts        # 크론 작업 엔드포인트
-      ├── kv-check/route.ts       # KV 데이터 확인
-      └── kv-test/route.ts        # KV 연결 테스트
 
 components/
   ├── ProjectCard.tsx             # 프로젝트 카드
@@ -84,8 +81,8 @@ core/
   │   └── mock.ts                 # 프로젝트 mock 데이터
   └── logic/
       ├── getProjects.ts          # 프로젝트 조회
-      ├── getShorts.ts            # 쇼츠 조회 (KV에서 읽기)
-      └── syncShorts.ts           # 쇼츠 동기화 (YouTube → KV)
+      ├── getShorts.ts            # 쇼츠 조회
+      └── syncShorts.ts           # 쇼츠 동기화 (YouTube API)
 
 vercel.json                        # 크론 스케줄 설정 (10분마다)
 ```
@@ -96,8 +93,8 @@ vercel.json                        # 크론 스케줄 설정 (10분마다)
 
 ### 자동 동기화
 1. **크론 작업**: 10분마다 `/api/cron/sync-shorts` 자동 실행
-2. **데이터 수집**: YouTube API → 필터링 → KV 저장
-3. **웹사이트 표시**: KV → `getShorts()` → UI
+2. **데이터 수집**: YouTube API → 필터링
+3. **웹사이트 표시**: `getShorts()` → UI
 
 ### 수동 동기화
 1. `/admin/sync` 페이지 접속
@@ -113,9 +110,7 @@ vercel.json                        # 크론 스케줄 설정 (10분마다)
 - **파일**: `vercel.json`
 
 ### 데이터 저장
-- **저장소**: Vercel KV (Redis)
-- **키**: `shorts:latest`
-- **TTL**: 6시간 (21600초)
+- **저장소**: 메모리 (임시)
 
 ### 필터링 조건
 - duration ≤ 60초
@@ -134,9 +129,6 @@ YOUTUBE_CHANNEL_ID=your_channel_id
 # 크론 보안
 SHORTS_SYNC_SECRET=your_secret
 
-# Vercel KV
-KV_REST_API_URL=your_kv_url
-KV_REST_API_TOKEN=your_kv_token
 ```
 
 ---

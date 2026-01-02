@@ -1,15 +1,12 @@
+// app/api/shorts/route.ts
 import { NextResponse } from "next/server";
 import { getShorts } from "@/core/logic/getShorts";
 
 export const runtime = "nodejs";
 
-/**
- * GET /api/shorts
- * - Redis(KV)에 저장된 쇼츠 데이터만 반환
- */
 export async function GET() {
   try {
-    const videos = await getShorts();
+    const videos = await getShorts(); // 🔥 여기서 자동 sync 발생
 
     return NextResponse.json({
       success: true,

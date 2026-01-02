@@ -97,7 +97,7 @@ node scripts/run-sync-shorts.js
 
 ---
 
-## KV에 저장되는 데이터 구조
+## 데이터 구조
 
 ### 저장 키 (Key)
 ```
@@ -140,14 +140,14 @@ interface Video {
 - **TTL (Time To Live)**: 21600초 (6시간)
 - **설정 위치**: `app/api/cron/sync-shorts/route.ts` 149번 줄
   ```typescript
-  await kv.set("shorts:latest", shortsData, { ex: 21600 });
+  // 데이터 처리
   ```
 
 ---
 
 ## 필터링 조건
 
-크론 작업이 KV에 저장하기 전에 필터링하는 조건:
+크론 작업이 필터링하는 조건:
 
 1. **duration ≤ 60초**: 영상 길이가 60초 이하
 2. **embeddable = true**: 임베드 가능한 영상
@@ -188,8 +188,6 @@ interface Video {
    - `YOUTUBE_API_KEY`
    - `YOUTUBE_CHANNEL_ID`
    - `SHORTS_SYNC_SECRET`
-   - `KV_REST_API_URL`
-   - `KV_REST_API_TOKEN`
 3. **API 할당량**: YouTube Data API v3는 일일 할당량이 있으므로 과도한 실행은 피하세요.
 
 

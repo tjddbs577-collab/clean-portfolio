@@ -8,7 +8,7 @@ Next.js 16 App Router + TypeScript 기반 프로젝트로, YouTube 쇼츠를 자
 ### 1. YouTube 쇼츠 자동 수집 시스템
 - YouTube Data API v3로 채널의 최신 영상 50개 수집
 - duration ≤ 60초, embeddable, public 영상만 필터링
-- Vercel KV(Redis)에 저장 (TTL 6시간)
+- 쇼츠 데이터 처리
 - 크론 작업으로 10분마다 자동 동기화
 
 ## 검토 요청 사항
@@ -27,7 +27,7 @@ Next.js 16 App Router + TypeScript 기반 프로젝트로, YouTube 쇼츠를 자
 - `/admin/sync/route.ts`: 관리자 페이지용 (Secret 검증 없음)
 
 ### 3. 데이터 흐름
-YouTube API → syncShorts() → Vercel KV → getShorts() → UI
+YouTube API → syncShorts() → getShorts() → UI
 
 ## 질문할 내용
 
@@ -40,8 +40,8 @@ YouTube API → syncShorts() → Vercel KV → getShorts() → UI
 ## 파일 구조
 ```
 core/logic/
-  ├── syncShorts.ts      # YouTube API 호출 및 KV 저장 (공통 로직)
-  └── getShorts.ts       # KV에서 쇼츠 데이터 읽기
+  ├── syncShorts.ts      # YouTube API 호출 (공통 로직)
+  └── getShorts.ts       # 쇼츠 데이터 읽기
 
 app/api/
   ├── cron/sync-shorts/route.ts  # 크론 작업 엔드포인트
